@@ -6,6 +6,7 @@ using SportsStore.Domain.Entities;
 using System.Linq;
 using SportsStore.WebUI.Controllers;
 using System.Collections.Generic;
+using System.Web.Mvc;
 
 namespace SportsStore.UnitTests
 {
@@ -70,6 +71,59 @@ namespace SportsStore.UnitTests
             Product result = target.Edit(4).ViewData.Model as Product;
 
             Assert.IsNull(result);
+        }
+
+        [TestMethod]
+        public void Can_Save_Valid_Changes()
+        {
+            Mock<IProductRepository> mock = new Mock<IProductRepository>();
+
+            AdminController target = new AdminController(mock.Object);
+
+            Product product = new Product { Name = "Test" };
+
+            ActionResult result = target.Edit(product);
+
+            // asserts
+            mock.Verify(m => m.SaveProduct(product));
+            Assert.IsNotInstanceOfType(result, typeof(ViewResult));
+        }
+
+        [TestMethod]
+        public void Cannot_Save_Invalid_Changes()
+        {
+            Mock<IProductRepository> mock = new Mock<IProductRepository>();
+
+            AdminController target = new AdminController(mock.Object);
+
+            Product product = new Product { Name = "Test" };
+
+            target.ModelState.AddModelError("error", "error");
+
+            ActionResult result = target.Edit(product);
+
+            // assert
+            mock.Verify(m => m.SaveProduct(product), Times.Never());
+            Assert.IsInstanceOfType(result, typeof(ViewResult));
+        }
+
+        [TestMethod]
+        public void Can_Delete_Valid_Products()
+        {
+            Product prod = new Product { ProductID = 2, Name = "Test" };
+
+            Mock<IProductRepository> mock = new Mock<IProductRepository>();
+            mock.Setup(m => m.Products).Returns(new Product[]{
+                new Product { ProductID = 1, Name = "P1" },
+                prod,
+                new Product { ProductID = 3, Name = "P3" }
+            }.AsQueryable());
+
+            AdminController target = new AdminController(mock.Object);
+
+            target.Delete(prod.ProductID);
+
+            mock.Verify(m => m.DeleteProduct(prod.ProductID));
         }
     }
 }
